@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!-- Created with Inkscape (http://www.inkscape.org/) -->
+
+<svg
+   width="500"
+   height="500"
+   viewBox="0 0 132.29167 132.29167"
+   version="1.1"
+   id="svg5"
+   inkscape:version="1.1.2 (0a00cf5339, 2022-02-04)"
+   sodipodi:docname="mapPin.svg"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg">
+  <sodipodi:namedview
+     id="namedview7"
+     pagecolor="#ffffff"
+     bordercolor="#666666"
+     borderopacity="1.0"
+     inkscape:pageshadow="2"
+     inkscape:pageopacity="0.0"
+     inkscape:pagecheckerboard="0"
+     inkscape:document-units="px"
+     showgrid="true"
+     units="px"
+     width="500in"
+     showguides="true"
+     inkscape:guide-bbox="true"
+     inkscape:zoom="1.5037598"
+     inkscape:cx="210.47244"
+     inkscape:cy="221.11244"
+     inkscape:window-width="1846"
+     inkscape:window-height="1016"
+     inkscape:window-x="74"
+     inkscape:window-y="27"
+     inkscape:window-maximized="1"
+     inkscape:current-layer="layer1">
+    <inkscape:grid
+       type="xygrid"
+       id="grid213" />
+    <sodipodi:guide
+       position="66.145835,119.0625"
+       orientation="1,0"
+       id="guide217" />
+  </sodipodi:namedview>
+  <defs
+     id="defs2" />
+  <g
+     inkscape:label="Layer 1"
+     inkscape:groupmode="layer"
+     id="layer1">
+    <circle
+       id="path332"
+       style="fill:#000000;stroke:#000000;stroke-width:0.264583"
+       cx="65.611565"
+       cy="115.72847"
+       r="0.023436084" />
+    <circle
+       id="path334"
+       style="fill:#000000;stroke:#000000;stroke-width:0.264583"
+       cx="65.611565"
+       cy="115.72848"
+       r="0.023436086" />
+    <path
+       id="path373"
+       style="fill:currentColor;stroke:#000000;stroke-width:9.9;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1;stroke-miterlimit:4;stroke-dasharray:none"
+       d="M 250 110 C 0 110 250 410 250 410 C 250 410 500 110 250 110 z M 250 152.2832 A 43.513179 44.999999 0 0 1 293.51367 197.2832 A 43.513179 44.999999 0 0 1 250 242.2832 A 43.513179 44.999999 0 0 1 206.48633 197.2832 A 43.513179 44.999999 0 0 1 250 152.2832 z "
+       transform="scale(0.26458334)" />
+  </g>
+</svg>
