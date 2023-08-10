@@ -42,6 +42,9 @@ function MapContents({
           <LayerGroup key={`route-${ii}`}>
             {route.routeStops.map(({ id }, nn) => {
               const { pathwaysToGetToStops } = route;
+              if (!pathwaysToGetToStops[id]) {
+                return <></>;
+              }
               return (
                 <LayerGroup>
                   <Polyline
@@ -80,7 +83,11 @@ function MapContents({
                     : "gray",
               }}
             >
-              <MapPin onClick={() => setSelected(id)} />
+              <MapPin
+                onClick={() => {
+                  id === selectedStop ? setSelected(null) : setSelected(id);
+                }}
+              />
             </div>
           </JSXMarker>
         );

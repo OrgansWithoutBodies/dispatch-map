@@ -37,21 +37,18 @@ export class DataQuery extends Query<DataState> {
         //   routeDepartures,
         //   routePaths,
         // });
-        if (
-          !(Object.keys(drivers).length > 0) ||
-          !(Object.keys(stops).length > 0) ||
-          !(Object.keys(routeStops).length > 0) ||
-          !(Object.keys(routePaths).length > 0)
-        ) {
-          return [];
-        }
+        // if (!(Object.keys(routePaths).length > 0)) {
+        // return [];
+        // }
         return routeIDs.map<Route>((id) => ({
           id,
           departureTime: routeDepartures[id] || (0 as Minutes),
           drivers: Object.keys(drivers).filter((key) =>
             drivers[key].includes(id)
           ),
-          routeStops: routeStops[id].map((stopID) => ({ ...stops[stopID] })),
+          routeStops: (routeStops[id] || []).map((stopID) => ({
+            ...stops[stopID],
+          })),
           pathwaysToGetToStops: routePaths,
         }));
       }

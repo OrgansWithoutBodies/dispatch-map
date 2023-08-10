@@ -4,9 +4,9 @@ import {
   BUFFER_LEN,
   HOURS_IN_DAY,
   HOURS_TO_MINUTES,
-  KonvaButton,
   MINUTES_IN_HOUR,
 } from "./App";
+import { ButtonList } from "./ButtonList";
 import { Hours, Minutes } from "./Minutes";
 import { DriverID, Route, RouteID, StopID } from "./data/data.store";
 
@@ -17,18 +17,20 @@ type ColorfulRoute = Route & {
 };
 
 export function BeadTimelines({
-  width: width,
-  height: height,
+  width,
+  height,
   // content,
   closingTime,
   routeIDs,
   currentTime,
-  routes: routes,
+  routes,
   selectedStop,
   setSelected,
   drivers,
   addSelectedStopToRoute,
+  selectedDriver,
 }: {
+  selectedDriver: DriverID | null;
   width: number;
   selectedStop: StopID | null;
   setSelected: (stop: StopID | null) => void;
@@ -67,6 +69,9 @@ export function BeadTimelines({
         />
         {route.routeStops.map(({ duration, id }) => {
           const localLastFinishTime = lastFinishTime;
+          if (!route.pathwaysToGetToStops[id]) {
+            return <></>;
+          }
           const { travelDuration } = route.pathwaysToGetToStops[id];
           const expectedArrivalTime = (localLastFinishTime +
             travelDuration) as Minutes;
@@ -190,6 +195,10 @@ export function BeadTimelines({
         <Layer>
           {routeIDs.map((id, ii) => {
             const route = routes.find((route) => route.id === id);
+            if (!route) {
+              return <></>;
+            }
+            console.log("TEST123-drivers", route.routeStops, route?.drivers);
             return (
               <>
                 <Group y={headerHeight + ii * lineHeight}>
@@ -199,15 +208,67 @@ export function BeadTimelines({
                       .filter((driverID) => drivers[driverID]?.includes(id))
                       .join(", ")}
                   />
-                  <KonvaButton
-                    buttonWidth={0}
-                    buttonHeight={0}
-                    fill={"#00ff00"}
-                    // onClick={console.log}
-                    onClick={() => addSelectedStopToRoute(id)}
-                    text={"Add Stop To\nThis Route"}
-                    textcolor={"#00ff00"}
-                  />
+                  {/* <Text
+                    text={route.routeStops.fil}
+                  /> */}
+                  {
+                    <Group x={-80} y={10}>
+                      <ButtonList
+                        x={timelineStartPix / 2}
+                        padding={15}
+                        margin={10}
+                        buttons={[
+                          {
+                            color: "#00FF00",
+                            onClick: () => addSelectedStopToRoute(id),
+                            text: "+Stop",
+                            disabled: selectedStop === null,
+                          },
+                          {
+                            color: "#FF0000",
+                            onClick: () => addSelectedStopToRoute(id),
+                            text: "-Stop",
+                            disabled: selectedStop === null,
+                          },
+                        ]}
+                      />
+                      <Group x={70}>
+                        <ButtonList
+                          x={timelineStartPix / 2}
+                          padding={15}
+                          margin={10}
+                          buttons={[
+                            {
+                              color: "#0000FF",
+                              onClick: () => addSelectedStopToRoute(id),
+                              text: "+Driver",
+                              disabled: selectedDriver === null,
+                            },
+                            {
+                              color: "#DD0000",
+                              onClick: () => addSelectedStopToRoute(id),
+                              text: "-Driver",
+                              disabled: selectedDriver === null,
+                            },
+                          ]}
+                        />
+                      </Group>
+                      <ButtonList
+                        y={70}
+                        x={130}
+                        padding={10}
+                        margin={10}
+                        buttons={[
+                          {
+                            color: "#FF00FF",
+                            onClick: () => {},
+                            text: "Optimize",
+                            disabled: route.routeStops.length === 0,
+                          },
+                        ]}
+                      />
+                    </Group>
+                  }
                   {/* <Group
                     x={timelineStartPix}
                     y={((1 - bubblePerc) / 2) * lineHeight}

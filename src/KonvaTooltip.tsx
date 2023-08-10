@@ -1,5 +1,6 @@
 import { Group, Rect, Text } from "react-konva";
-import { COLORS, KonvaButton, Placement } from "./App";
+import { COLORS, Placement } from "./App";
+import { KonvaButton } from "./KonvaButton";
 import { StopID } from "./data/data.store";
 
 export function KonvaTooltip({

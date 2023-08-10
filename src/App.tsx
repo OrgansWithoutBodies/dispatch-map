@@ -1,12 +1,10 @@
 import { useEffect, useRef, useState } from "react";
-import { Group, Rect, Text } from "react-konva";
-import { HexString } from "type-library";
 import { FreeFormAddress } from "./Address";
 import { BeadTimelines } from "./BeadTimelines";
 import { JobMap } from "./JobMap";
 import { Hours, Milliseconds, Minutes, Seconds } from "./Minutes";
 import { dataService } from "./data/data.service";
-import { RouteID, StopID } from "./data/data.store";
+import { DriverID, RouteID, StopID } from "./data/data.store";
 import { useData } from "./data/useAkita";
 // TODO 'which dispatch center is closest'
 // division on zoom ->2hr>1hr>30m>15m>5m>1m
@@ -71,6 +69,7 @@ function App(): JSX.Element {
       clearInterval(interval);
     };
   }, []);
+  const [selectedDriver, setSelectedDriver] = useState<null | DriverID>(null);
   // void buildRouteList(
   //   Object.values(routeStops).map((idList)=>idList.map((id)=>daysStops[id])),
   //   (routes) => dataService.setRoutes(routes),
@@ -90,11 +89,62 @@ function App(): JSX.Element {
   // TODO reverse geocode using nominatim to add locations?
   return (
     <>
-      {!homeBaseAddress && (
+      {!homeBaseAddress ? (
         <AddressInput
           setter={(val) => dataService.setHomeBase(val)}
           stopTypeName={"Home Base"}
         />
+      ) : (
+        <div style={{ display: "flex", flexDirection: "row" }}>
+          <AddressInput
+            setter={(val) => dataService.addDayStop(val)}
+            stopTypeName={"Stop"}
+          />
+          <button
+            onClick={() => {
+              dataService.addDriver();
+            }}
+          >
+            Add Driver
+          </button>
+          <button
+            onClick={() => {
+              dataService.addDayRoute();
+            }}
+          >
+            Add Route
+          </button>
+          <div
+            style={{
+              display: "flex",
+              flexDirection: "row",
+              overflow: "scroll",
+              maxWidth: "100%",
+            }}
+          >
+            {Object.keys(drivers).map((driverID) => (
+              <div
+                onClick={() =>
+                  driverID === selectedDriver
+                    ? setSelectedDriver(null)
+                    : setSelectedDriver(driverID)
+                }
+                style={{
+                  margin: 10,
+                  padding: 10,
+                  borderRadius: 10,
+                  width: 100,
+                  height: 100,
+                  backgroundColor:
+                    selectedDriver === driverID ? "yellow" : "white",
+                  color: "black",
+                }}
+              >
+                Driver: {driverID}
+              </div>
+            ))}
+          </div>
+        </div>
       )}
       {homeBaseAddress && (
         <>
@@ -120,6 +170,7 @@ function App(): JSX.Element {
           />
 
           <BeadTimelines
+            selectedDriver={selectedDriver}
             drivers={drivers}
             addSelectedStopToRoute={(routeID) => {
               if (selected) {
@@ -139,49 +190,6 @@ function App(): JSX.Element {
             }))}
             routeIDs={routeIDs}
           />
-        </>
-      )}
-      {routeIDs && (
-        <>
-          <div>
-            <button
-              onClick={() => {
-                dataService.addDayRoute();
-              }}
-            >
-              Add Route
-            </button>
-            <button
-              onClick={() => {
-                dataService.addDriver();
-              }}
-            >
-              Add Driver
-            </button>
-            <AddressInput
-              setter={(val) => dataService.addDayStop(val)}
-              stopTypeName={"Stop"}
-            />
-          </div>
-          <FormButton
-            entries={Object.keys(drivers)}
-            mapVals={routeIDs}
-            entryString={"Driver"}
-            mapString={"Route"}
-            onSubmit={({ val1, val2 }) =>
-              dataService.addDriverToRoute(val1, val2)
-            }
-          />
-          <FormButton
-            entries={Object.keys(daysStops)}
-            entryString={"Stop"}
-            mapVals={routeIDs}
-            mapString={"Route"}
-            onSubmit={({ val1, val2 }) =>
-              dataService.addStopToRoute(val1, val2)
-            }
-          />
-          <OptimizeButton routes={routeIDs} />
         </>
       )}
     </>
@@ -255,6 +263,7 @@ function AddressInput({
         onClick={() => {
           if (homeBaseRef.current && homeBaseRef.current.value) {
             setter({ q: homeBaseRef.current.value });
+            homeBaseRef.current.value = "";
           }
         }}
       >
@@ -281,44 +290,6 @@ export enum Placement {
   "BOTTOM",
   "LEFT",
   "RIGHT",
-}
-export function KonvaButton({
-  y = 0,
-  buttonWidth,
-  buttonHeight,
-  fill,
-  onClick,
-  text,
-  textcolor,
-}: {
-  y?: number;
-  buttonWidth: number;
-  buttonHeight: number;
-  fill: HexString;
-  onClick: () => void;
-  text: string;
-  textcolor: HexString;
-}) {
-  const [pressing, setPressing] = useState<boolean>(false);
-  return (
-    <Group
-      y={y}
-      onMouseDown={() => {
-        setPressing(true);
-      }}
-      onMouseUp={() => {
-        setPressing(false);
-      }}
-      onClick={onClick}
-    >
-      <Rect
-        width={buttonWidth}
-        height={buttonHeight}
-        fill={pressing ? "gray" : fill}
-      />
-      <Text x={buttonWidth / 2} text={text} fill={textcolor} fontSize={20} />
-    </Group>
-  );
 }
 function OptimizeButton({ routes }: { routes: RouteID[] }): JSX.Element {
   const selectRef = useRef<HTMLSelectElement | null>(null);
