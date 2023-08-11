@@ -6,12 +6,14 @@ import { generateID } from "./chars";
 import {
   DataStore,
   DriverID,
+  PathwayFromLastStop,
   RouteID,
   Stop,
   StopID,
   dataStore,
 } from "./data.store";
 
+export const TRIAL_MODE_ALLOWED_QUERIES = 10 as const;
 const freeFormGuard = (address: IAddress): address is FreeFormAddress => {
   return !("zipCode" in address);
 };
@@ -63,7 +65,10 @@ type NominatimReturnType = {
   lat: `${number}`;
   lon: `${number}`;
 }[];
-const requestThrottle = new ThrottleableRequest(1000 as Milliseconds);
+const requestThrottle = new ThrottleableRequest(
+  1000 as Milliseconds,
+  TRIAL_MODE_ALLOWED_QUERIES
+);
 
 export class DataService {
   constructor(private dataStore: DataStore) {}
@@ -77,9 +82,16 @@ export class DataService {
     } = this.dataStore.getValue();
 
     console.log(buildNominatimURL(address, NOMINATIM_URL));
-    const result = await requestThrottle.get<NominatimReturnType>(
-      buildNominatimURL(address, NOMINATIM_URL)
-    );
+    const result = await requestThrottle
+      .get<NominatimReturnType>(buildNominatimURL(address, NOMINATIM_URL))
+      .catch(
+        (error) =>
+          error.message === "TRIAL MODE" &&
+          this.dataStore.update(({ ...state }) => ({
+            ...state,
+            trialModeError: true,
+          }))
+      );
     const { data, status } = result;
     if (status !== 200) {
       return null;
@@ -92,13 +104,7 @@ export class DataService {
       display_name,
     };
   }
-  public async getOSRM(stops: Stop[]): Promise<Record<
-    StopID,
-    {
-      path: [longitude: number, latitude: number][];
-      travelDuration: Minutes;
-    }
-  > | null> {
+  public async getOSRM(stops: Stop[]): Promise<PathwayFromLastStop | null> {
     const {
       mapServiceURLs: { OSRM: OSRM_URL },
     } = this.dataStore.getValue();
@@ -153,6 +159,17 @@ export class DataService {
       };
     });
   }
+  public updateDurationForStop(stop: StopID, duration: Minutes): void {
+    this.dataStore.update((state) => {
+      return {
+        ...state,
+        daysStops: {
+          ...state.daysStops,
+          [stop]: { ...state.daysStops[stop], duration },
+        },
+      };
+    });
+  }
 
   public async addDayStop(address: FreeFormAddress): Promise<void> {
     const data = await this.getNominatim(address);
@@ -186,6 +203,19 @@ export class DataService {
       };
     });
   }
+  public removeDriverFromRoute(driver: DriverID, route: RouteID): void {
+    this.dataStore.update((state) => {
+      return {
+        ...state,
+        drivers: {
+          ...state.drivers,
+          [driver]: [
+            ...state.drivers[driver].filter((routeID) => routeID !== route),
+          ],
+        },
+      };
+    });
+  }
   public addDayRoute(): void {
     const newID = generateID<RouteID>();
     this.dataStore.update((state) => {
@@ -205,6 +235,7 @@ export class DataService {
   }
   public async calculateRoutePath(route: RouteID): Promise<void> {
     const { routeStops, daysStops, homeBase } = this.dataStore.getValue();
+    console.log("TEST123-calculating");
     if (!homeBase) {
       return;
     }
@@ -226,7 +257,11 @@ export class DataService {
       //   minNumberOfWorkers: 0,
       //   stopDescription: "home sweet home",
       // },
-    ]);
+    ]).catch(
+      (error) =>
+        error.message === "TRIAL MODE" &&
+        this.dataStore.update(({ ...s }) => ({ ...s, trialModeError: true }))
+    );
     if (!data) {
       throw new Error("whoops");
     }
@@ -255,6 +290,7 @@ export class DataService {
       this.addDriver();
     }
   }
+  // TODO if already exists in one, remove from that one & add to new one
   public addStopToRoute(stop: StopID, route: RouteID): void {
     this.dataStore.update((state) => {
       return {
@@ -265,6 +301,26 @@ export class DataService {
             ? [...state.routeStops[route], stop]
             : [stop],
         },
+        highlightedStop: null,
+      };
+    });
+    console.log(this.dataStore.getValue().routeStops);
+  }
+  public removeSelectedStopFromRoute(stop: StopID, route: RouteID): void {
+    this.dataStore.update((state) => {
+      return {
+        ...state,
+        routeStops: {
+          ...state.routeStops,
+          [route]: state.routeStops[route]
+            ? [
+                ...state.routeStops[route].filter(
+                  (stopToFilter) => stopToFilter !== stop
+                ),
+              ]
+            : [],
+        },
+        highlightedStop: null,
       };
     });
     console.log(this.dataStore.getValue().routeStops);

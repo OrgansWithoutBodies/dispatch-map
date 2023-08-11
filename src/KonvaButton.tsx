@@ -14,6 +14,9 @@ export function KonvaButton({
   buttonWidth,
   margin,
   disabled,
+  hoveringColor = "#777777",
+  pressingColor = "#666666",
+  disabledColor = "#555555",
 }: {
   y?: number;
   x?: number;
@@ -26,8 +29,12 @@ export function KonvaButton({
   onClick: () => void;
   text: string;
   textcolor: HexString;
+  pressingColor?: HexString;
+  hoveringColor?: HexString;
+  disabledColor?: HexString;
 }) {
   const [pressing, setPressing] = useState<boolean>(false);
+  const [hovering, setHovering] = useState<boolean>(false);
   return (
     <Group
       y={y}
@@ -47,6 +54,23 @@ export function KonvaButton({
           onClick();
         }
       }}
+      onPointerDown={() => {
+        if (!disabled) {
+          setPressing(true);
+        }
+      }}
+      onPointerUp={() => {
+        if (!disabled) {
+          setPressing(false);
+        }
+      }}
+      onPointerClick={() => {
+        if (!disabled) {
+          onClick();
+        }
+      }}
+      onMouseOver={() => setHovering(true)}
+      onMouseLeave={() => setHovering(false)}
     >
       <Rect
         cornerRadius={5}
@@ -54,7 +78,15 @@ export function KonvaButton({
         y={-margin / 2}
         width={buttonWidth + margin}
         height={buttonHeight + margin}
-        fill={pressing || disabled ? "gray" : fill}
+        fill={
+          pressing
+            ? pressingColor
+            : hovering
+            ? hoveringColor
+            : disabled
+            ? disabledColor
+            : fill
+        }
       />
       <Text align={"center"} text={text} fill={textcolor} fontSize={fontSize} />
     </Group>

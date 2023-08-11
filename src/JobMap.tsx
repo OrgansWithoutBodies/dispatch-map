@@ -39,6 +39,7 @@ function MapContents({
       />
       {routes.map((route, ii) => {
         return (
+          // TODO 'reverse route' button?
           <LayerGroup key={`route-${ii}`}>
             {route.routeStops.map(({ id }, nn) => {
               const { pathwaysToGetToStops } = route;
@@ -161,8 +162,8 @@ function Star({
       positions={[...new Array(10).keys()].map((ii) => {
         const r = ii % 2 === 1 ? tineLength : coreLength;
         return [
-          center.lat + r * Math.cos((ii * Math.PI * 2) / 10),
-          center.lng + r * Math.sin((ii * Math.PI * 2) / 10),
+          center.lat - r * Math.cos((ii * Math.PI * 2) / 10),
+          center.lng - r * Math.sin((ii * Math.PI * 2) / 10),
         ];
       })}
     />

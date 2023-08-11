@@ -3,8 +3,8 @@ import { ArrV2, BrandedString } from "type-library";
 import { FreeFormAddress } from "../Address";
 import { Minutes } from "../Minutes";
 
-export const DEFAULT_NOMINATIM_URL = "http://nominatim.openstreetmap.org/";
-export const DEFAULT_OSRM_URL = `http://router.project-osrm.org/trip/v1/driving/`;
+export const DEFAULT_NOMINATIM_URL = "https://nominatim.openstreetmap.org/";
+export const DEFAULT_OSRM_URL = `https://router.project-osrm.org/trip/v1/driving/`;
 
 export type RouteID = BrandedString<"Route">;
 export type StopID = BrandedString<"Stop">;
@@ -23,7 +23,7 @@ export type Vehicle = {
 
 export type Coordinate = { lat: number; lng: number };
 
-type PathwayFromLastStop = Record<
+export type PathwayFromLastStop = Record<
   StopID,
   {
     coordinates: ArrV2[];
@@ -61,11 +61,13 @@ export interface DataState {
   drivers: Record<DriverID, RouteID[]>;
   routeDepartures: Record<RouteID, Minutes>;
   routeStops: Record<RouteID, StopID[]>;
-  routePaths: Record<StopID, PathwayFromLastStop>;
+  routePaths: PathwayFromLastStop;
 
   addressCoordinateLookupCache: Record<string, Coordinate>;
 
   mapServiceURLs: Record<"OSRM" | "Nominatim", string>;
+
+  trialModeError: boolean;
 }
 
 // TODO persist
@@ -86,6 +88,7 @@ export function createInitialState(): DataState {
       Nominatim: DEFAULT_NOMINATIM_URL,
       OSRM: DEFAULT_OSRM_URL,
     },
+    trialModeError: false,
   };
 }
 

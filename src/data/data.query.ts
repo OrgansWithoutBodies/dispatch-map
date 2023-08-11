@@ -8,6 +8,8 @@ export class DataQuery extends Query<DataState> {
   constructor(protected store: DataStore) {
     super(store);
   }
+  public trialModeError = this.select("trialModeError");
+
   public drivers = this.select("drivers");
   public addressRouteAssignments = this.select("addressRouteAssignments");
   public daysStops = this.select("daysStops");

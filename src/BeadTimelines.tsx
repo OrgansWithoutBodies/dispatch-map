@@ -1,11 +1,6 @@
 import { Group, Layer, Line, Rect, Stage, Text } from "react-konva";
 import { HexString } from "type-library";
-import {
-  BUFFER_LEN,
-  HOURS_IN_DAY,
-  HOURS_TO_MINUTES,
-  MINUTES_IN_HOUR,
-} from "./App";
+import { HOURS_IN_DAY, HOURS_TO_MINUTES, MINUTES_IN_HOUR } from "./App";
 import { ButtonList } from "./ButtonList";
 import { Hours, Minutes } from "./Minutes";
 import { DriverID, Route, RouteID, StopID } from "./data/data.store";
@@ -16,6 +11,7 @@ type ColorfulRoute = Route & {
   color: HexString;
 };
 
+// TODO can double add drivers or stops
 export function BeadTimelines({
   width,
   height,
@@ -26,14 +22,20 @@ export function BeadTimelines({
   routes,
   selectedStop,
   setSelected,
-  drivers,
+  // drivers,
   addSelectedStopToRoute,
+  removeSelectedStopFromRoute,
   selectedDriver,
+  addNewRoute,
+  addDriverToRoute,
+  removeDriverFromRoute,
+  optimizeRoute,
 }: {
   selectedDriver: DriverID | null;
   width: number;
   selectedStop: StopID | null;
   setSelected: (stop: StopID | null) => void;
+  addNewRoute: () => void;
   drivers: Record<DriverID, RouteID[]>;
   height: number;
   //` content: JobContentsType;
@@ -43,6 +45,10 @@ export function BeadTimelines({
   closingTime: Minutes;
   currentTime: Minutes;
   addSelectedStopToRoute: (routeID: RouteID) => void;
+  removeSelectedStopFromRoute: (routeID: RouteID) => void;
+  addDriverToRoute: (driverID: DriverID, routeID: RouteID) => void;
+  removeDriverFromRoute: (driverID: DriverID, routeID: RouteID) => void;
+  optimizeRoute: (routeID: RouteID) => void;
 }): JSX.Element {
   // TODO end at closing hour start at opening hour
   // const [dragging, setDragging] = useState<number | null>(null);
@@ -79,16 +85,27 @@ export function BeadTimelines({
           const isSelected = selectedStop === id;
           return (
             <Group>
-              <Rect
+              {/* <Rect
                 x={minSinceMidnightToPixels(
                   (expectedArrivalTime - BUFFER_LEN) as Minutes
                 )}
                 width={minSinceMidnightToPixels(BUFFER_LEN)}
                 height={lineHeight * bubblePerc}
                 fill={"#cccccc"}
+              /> */}
+              <Rect
+                x={minSinceMidnightToPixels(
+                  (expectedArrivalTime - travelDuration) as Minutes
+                )}
+                y={(lineHeight * bubblePerc) / 2}
+                fill={route.color}
+                height={10}
+                width={minSinceMidnightToPixels(travelDuration)}
               />
               <Group x={minSinceMidnightToPixels(expectedArrivalTime)}>
                 <Rect
+                  strokeWidth={2}
+                  stroke={"black"}
                   // TODO alternate hour slot colors?
                   onMouseDown={() => setSelected(id)}
                   width={minSinceMidnightToPixels(duration)}
@@ -105,14 +122,14 @@ export function BeadTimelines({
                             />
                           )} */}
               </Group>
-              <Rect
+              {/* <Rect
                 x={minSinceMidnightToPixels(
                   (expectedArrivalTime + duration) as Minutes
                 )}
                 width={minSinceMidnightToPixels(BUFFER_LEN)}
                 height={lineHeight * bubblePerc}
                 fill={"#cccccc"}
-              />
+              /> */}
             </Group>
           );
         })}
@@ -149,7 +166,28 @@ export function BeadTimelines({
     >
       <Stage height={height} width={width}>
         <Layer>
-          <Rect width={width} height={headerHeight} fill="gray"></Rect>
+          <Rect width={width} height={headerHeight} fill="gray" />
+          <ButtonList
+            y={5}
+            x={20}
+            buttons={[
+              {
+                text: "Add New Route",
+                fill: "#008800",
+                color: "#FFFFFF",
+                onClick: addNewRoute,
+              },
+            ]}
+            padding={10}
+            margin={10}
+          />
+          {/* <Text
+              x={2}
+              y={2}
+              text={"+"}
+              onClick={() => addNewRoute()}
+              fontSize={20}
+            /> */}
           <Group>
             {routeIDs.map((_, ii) => {
               console.log("test", headerHeight, ii, lineHeight);
@@ -203,32 +241,48 @@ export function BeadTimelines({
               <>
                 <Group y={headerHeight + ii * lineHeight}>
                   {/* <Image width={50} height={50} image={lockImage} /> */}
-                  <Text
+                  {/* <Text
                     text={Object.keys(drivers)
                       .filter((driverID) => drivers[driverID]?.includes(id))
                       .join(", ")}
-                  />
-                  {/* <Text
-                    text={route.routeStops.fil}
                   /> */}
+                  <Text
+                    text={`${route.drivers.length} Driver${
+                      route.drivers.length === 1 ? "" : "s"
+                    } Assigned`}
+                  />
+                  <Text
+                    y={10}
+                    text={`${route.routeStops.length} Stop${
+                      route.routeStops.length === 1 ? "" : "s"
+                    } Assigned`}
+                  />
                   {
-                    <Group x={-80} y={10}>
+                    <Group x={-40} y={10}>
                       <ButtonList
                         x={timelineStartPix / 2}
                         padding={15}
                         margin={10}
                         buttons={[
                           {
-                            color: "#00FF00",
+                            fill: "#00FF00",
                             onClick: () => addSelectedStopToRoute(id),
                             text: "+Stop",
-                            disabled: selectedStop === null,
+                            disabled:
+                              selectedStop === null ||
+                              route.routeStops.filter(
+                                (stop) => stop.id === selectedStop
+                              ).length > 0,
                           },
                           {
-                            color: "#FF0000",
-                            onClick: () => addSelectedStopToRoute(id),
+                            fill: "#FF0000",
+                            onClick: () => removeSelectedStopFromRoute(id),
                             text: "-Stop",
-                            disabled: selectedStop === null,
+                            disabled:
+                              selectedStop === null ||
+                              route.routeStops.filter(
+                                (stop) => stop.id === selectedStop
+                              ).length === 0,
                           },
                         ]}
                       />
@@ -239,16 +293,24 @@ export function BeadTimelines({
                           margin={10}
                           buttons={[
                             {
-                              color: "#0000FF",
-                              onClick: () => addSelectedStopToRoute(id),
+                              fill: "#0000FF",
+                              onClick: () =>
+                                selectedDriver &&
+                                addDriverToRoute(selectedDriver, id),
                               text: "+Driver",
-                              disabled: selectedDriver === null,
+                              disabled:
+                                selectedDriver === null ||
+                                route.drivers.includes(selectedDriver),
                             },
                             {
-                              color: "#DD0000",
-                              onClick: () => addSelectedStopToRoute(id),
+                              fill: "#DD0000",
+                              onClick: () =>
+                                selectedDriver &&
+                                removeDriverFromRoute(selectedDriver, id),
                               text: "-Driver",
-                              disabled: selectedDriver === null,
+                              disabled:
+                                selectedDriver === null ||
+                                !route.drivers.includes(selectedDriver),
                             },
                           ]}
                         />
@@ -260,8 +322,8 @@ export function BeadTimelines({
                         margin={10}
                         buttons={[
                           {
-                            color: "#FF00FF",
-                            onClick: () => {},
+                            fill: "#FF00FF",
+                            onClick: () => optimizeRoute(id),
                             text: "Optimize",
                             disabled: route.routeStops.length === 0,
                           },

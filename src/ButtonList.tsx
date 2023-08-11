@@ -16,7 +16,8 @@ export function ButtonList({
   margin: number;
   buttons: {
     text: string;
-    color: HexString;
+    fill: HexString;
+    color?: HexString;
     onClick: () => void;
     disabled?: boolean;
   }[];
@@ -42,10 +43,10 @@ export function ButtonList({
               .reduce((a, b) => a + b.height + padding, 0)}
             buttonHeight={size.height}
             buttonWidth={size.width}
-            fill={buttons[ii].color}
+            fill={buttons[ii].fill}
             text={buttons[ii].text}
             onClick={() => buttons[ii].onClick()}
-            textcolor={"#ffffff"}
+            textcolor={buttons[ii].color || "#FFFFFF"}
           />
         );
       })}

@@ -49,6 +49,9 @@ export function KonvaTooltip({
           buttonWidth={width / 2}
           buttonHeight={buttonHeight}
           fill={COLORS[0]}
+          margin={0}
+          text={""}
+          textcolor={"#FFFFFF"}
         />
       </Group>
     </Group>
