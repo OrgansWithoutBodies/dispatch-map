@@ -1,33 +1,38 @@
 import { Store, StoreConfig } from "@datorama/akita";
 import { ArrV2, BrandedString } from "type-library";
 import { FreeFormAddress } from "../Address";
-import { Minutes } from "../Minutes";
+import { Gallon, MPG, Mile, Minutes, Years } from "../Units";
 
 export const DEFAULT_NOMINATIM_URL = "https://nominatim.openstreetmap.org/";
 export const DEFAULT_OSRM_URL = `https://router.project-osrm.org/trip/v1/driving/`;
 
 export type RouteID = BrandedString<"Route">;
 export type StopID = BrandedString<"Stop">;
+export type VehicleID = BrandedString<"Vehicle">;
 export type DriverID = BrandedString<"Driver">;
 
 export type Vehicle = {
+  id: VehicleID;
   alias: string;
   licensePlate: string;
   make: string;
   model: string;
-  year: number;
+  year: Years;
   color: string;
-  milage: number;
+  milage: MPG;
+  tankVolume: Gallon;
   storageCapacity: number;
 };
 
 export type Coordinate = { lat: number; lng: number };
 
+// TODO should this rly be a lookup? order does matter
 export type PathwayFromLastStop = Record<
   StopID,
   {
     coordinates: ArrV2[];
     travelDuration: Minutes;
+    travelDistance: Mile;
   }
 >;
 
@@ -36,6 +41,7 @@ export type Route = {
   drivers: DriverID[];
   departureTime: Minutes;
   routeStops: Stop[];
+  assignedVehicle: VehicleID | null;
   pathwaysToGetToStops: PathwayFromLastStop;
 };
 // export interface CoordinateAddress extends Address {
@@ -57,7 +63,9 @@ export interface DataState {
 
   routes: RouteID[];
   daysStops: Record<StopID, Stop>;
+  vehicles: Record<VehicleID, Vehicle>;
   addressRouteAssignments: Record<StopID, RouteID>;
+  vehicleRouteAssignments: Record<VehicleID, RouteID>;
   drivers: Record<DriverID, RouteID[]>;
   routeDepartures: Record<RouteID, Minutes>;
   routeStops: Record<RouteID, StopID[]>;
@@ -74,6 +82,7 @@ export interface DataState {
 export function createInitialState(): DataState {
   return {
     routeDepartures: {},
+    vehicles: {},
     routes: [],
     homeBase: null,
     highlightedStop: null,
@@ -82,6 +91,7 @@ export function createInitialState(): DataState {
     routeStops: {},
     routePaths: {},
     addressRouteAssignments: {},
+    vehicleRouteAssignments: {},
 
     addressCoordinateLookupCache: {},
     mapServiceURLs: {

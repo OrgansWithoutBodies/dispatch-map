@@ -1,8 +1,8 @@
 import { Group, Layer, Line, Rect, Stage, Text } from "react-konva";
 import { HexString } from "type-library";
-import { HOURS_IN_DAY, HOURS_TO_MINUTES, MINUTES_IN_HOUR } from "./App";
+import { HOURS_IN_DAY, MINUTES_IN_HOUR } from "./App";
 import { ButtonList } from "./ButtonList";
-import { Hours, Minutes } from "./Minutes";
+import { Hours, Minutes, calcMinutesFromHours } from "./Units";
 import { DriverID, Route, RouteID, StopID } from "./data/data.store";
 
 const bubblePerc = 0.7;
@@ -218,7 +218,7 @@ export function BeadTimelines({
           {([...Array.from({ length: HOURS_IN_DAY }).keys()] as Hours[]).map(
             (H) => {
               return (
-                <Group x={minSinceMidnightToPixels(HOURS_TO_MINUTES(H))}>
+                <Group x={minSinceMidnightToPixels(calcMinutesFromHours(H))}>
                   <Text text={`${H}:00`} fontSize={20} fill={"white"} />
                   <TimelineLine
                     minuteMark={0 as Minutes}

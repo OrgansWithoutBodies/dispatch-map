@@ -1,5 +1,5 @@
 import Axios, { AxiosRequestConfig, AxiosResponse } from "axios";
-import { Milliseconds } from "./Minutes";
+import { Milliseconds } from "./Units";
 
 export function pls<TNum extends number>(a: TNum, b: TNum): TNum {
   return (a + b) as TNum;
@@ -26,7 +26,8 @@ export class ThrottleableRequest {
   private requestsLeft: number;
   constructor(
     private readonly minimumMSBetweenRequests: Milliseconds,
-    readonly maxNumberOfRequests = -1
+    readonly maxNumberOfRequests: number = -1,
+    private readonly onExceedLimit: () => void
   ) {
     this.lastRequestTimestamp = min(Date.now(), minimumMSBetweenRequests);
     this.msSinceLastRequest = (minimumMSBetweenRequests + 1) as Milliseconds;
@@ -46,8 +47,10 @@ export class ThrottleableRequest {
     config?: AxiosRequestConfig<D>
   ): Promise<R> {
     this.updateClock();
+    console.log("TEST123-reqleft", this.requestsLeft);
     if (!(this.requestsLeft > 0)) {
-      throw new Error("TRIAL MODE");
+      this.onExceedLimit();
+      throw new Error("Trial Mode Limit Reached!");
     }
     let diff = this.minimumMSBetweenRequests - this.msSinceLastRequest;
     let pastMinimum = diff > 0;

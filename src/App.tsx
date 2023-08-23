@@ -3,10 +3,11 @@ import { ArrV2Inclusive, HexString } from "type-library";
 import { FreeFormAddress } from "./Address";
 import { BeadTimelines } from "./BeadTimelines";
 import { JobMap } from "./JobMap";
-import { Hours, Milliseconds, Minutes, Seconds } from "./Minutes";
+import { Hours, Milliseconds, Minutes, Seconds } from "./Units";
 import { TRIAL_MODE_ALLOWED_QUERIES, dataService } from "./data/data.service";
 import { DriverID, RouteID, Stop, StopID } from "./data/data.store";
 import { useData } from "./data/useAkita";
+// TODO get closest gas station to route
 // TODO 'which dispatch center is closest'
 // division on zoom ->2hr>1hr>30m>15m>5m>1m
 // move timeline details as own row?
@@ -36,26 +37,26 @@ export const COLORS = [
   "#330910",
 ] as const;
 export const BUFFER_LEN = 15 as Minutes;
-function SimpleLoadingComponent({ text }: { text: string }): JSX.Element {
-  const [numDots, setNumDots] = useState<1 | 2 | 3>(1);
-  useEffect(() => {
-    const interval = setInterval(
-      () => setNumDots((((numDots + 1) % 3) + 1) as 1 | 2 | 3),
-      1 * MS_IN_S
-    );
-    return () => {
-      clearInterval(interval);
-    };
-  }, []);
-  return (
-    <div>
-      {text}
-      {Array(numDots)
-        .map(() => ".")
-        .join()}
-    </div>
-  );
-}
+// function SimpleLoadingComponent({ text }: { text: string }): JSX.Element {
+//   const [numDots, setNumDots] = useState<1 | 2 | 3>(1);
+//   useEffect(() => {
+//     const interval = setInterval(
+//       () => setNumDots((((numDots + 1) % 3) + 1) as 1 | 2 | 3),
+//       1 * MS_IN_S
+//     );
+//     return () => {
+//       clearInterval(interval);
+//     };
+//   }, []);
+//   return (
+//     <div>
+//       {text}
+//       {Array(numDots)
+//         .map(() => ".")
+//         .join()}
+//     </div>
+//   );
+// }
 // const BusinessName = "Napa Mobile RV Repair";
 const MS_IN_S = 1000 as Milliseconds;
 const S_IN_MIN = 60 as Seconds;
@@ -306,11 +307,11 @@ function App(): JSX.Element {
 export const MINUTES_IN_HOUR = 60 as Minutes;
 export const HOURS_IN_DAY = 24 as Hours;
 function LoadingBar() {
-  const [numDots, setNumDots] = useState<1 | 2 | 3>(1);
+  const [numDots, setNumDots] = useState<0 | 1 | 2>(1);
 
   useEffect(() => {
     const interval = setInterval(
-      () => setNumDots((((numDots + 1) % 3) + 1) as 1 | 2 | 3),
+      () => setNumDots(((numDots + 1) % 3) as 0 | 1 | 2),
       1 * MS_IN_S
     );
     return () => {
@@ -319,11 +320,11 @@ function LoadingBar() {
   }, []);
   return (
     <InfoBar
-      text={`Loading${Array(numDots)
+      text={`Loading${Array(numDots + 1)
         .map(() => ".")
         .join()}`}
-      backgroundColor={"#FFFFFF"}
-      color={"#0000FF"}
+      color={"#FFFFFF"}
+      backgroundColor={"#0000FF"}
     />
   );
 }
@@ -502,9 +503,7 @@ export const NOMINATIM_MINIMUM_WAIT = 1 * MS_IN_S;
 // running late
 
 export default App;
-export function HOURS_TO_MINUTES(H: Hours): Minutes {
-  return (H * 60) as Minutes;
-}
+
 export enum Placement {
   "TOP",
   "BOTTOM",

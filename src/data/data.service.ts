@@ -1,9 +1,18 @@
 import { ArrV2 } from "type-library";
 import { Address, FreeFormAddress, IAddress } from "../Address";
-import { Milliseconds, Minutes, Seconds } from "../Minutes";
+import {
+  Meter,
+  Milliseconds,
+  Minutes,
+  Seconds,
+  calcKMFromMeters,
+  calcMilesFromKM,
+  calcMinutesFromSeconds,
+} from "../Units";
 import { ThrottleableRequest } from "../throttleRequest";
 import { generateID } from "./chars";
 import {
+  Coordinate,
   DataStore,
   DriverID,
   PathwayFromLastStop,
@@ -42,10 +51,10 @@ type OSRMGeometry = {
 type OSRMReturnType = {
   code: number;
   trips: {
-    distance: number;
+    distance: Meter;
     legs: {
-      distance: number;
-      duration: number;
+      distance: Meter;
+      duration: Seconds;
       weight: number;
       steps: { geometry: OSRMGeometry }[];
     }[];
@@ -54,7 +63,7 @@ type OSRMReturnType = {
   }[];
   waypoints: {
     waypoint_index: number;
-    distance: number;
+    distance: Meter;
     hint: string;
     location: ArrV2;
     name: string;
@@ -65,13 +74,26 @@ type NominatimReturnType = {
   lat: `${number}`;
   lon: `${number}`;
 }[];
-const requestThrottle = new ThrottleableRequest(
-  1000 as Milliseconds,
-  TRIAL_MODE_ALLOWED_QUERIES
-);
+
+const HOME_BASE_DUMMY_STOP = (homeBase: Coordinate): Stop => ({
+  id: "HOME" as StopID,
+  coordinates: homeBase,
+  address: { q: "HOME" },
+  duration: 0 as Minutes,
+  minNumberOfWorkers: 0,
+  stopDescription: "home sweet home",
+});
 
 export class DataService {
-  constructor(private dataStore: DataStore) {}
+  private requestThrottle: ThrottleableRequest;
+
+  constructor(private dataStore: DataStore) {
+    this.requestThrottle = new ThrottleableRequest(
+      1000 as Milliseconds,
+      TRIAL_MODE_ALLOWED_QUERIES,
+      () => this.triggerTrialMode()
+    );
+  }
 
   // TODO abstract the common between
   public async getNominatim(
@@ -81,17 +103,10 @@ export class DataService {
       mapServiceURLs: { Nominatim: NOMINATIM_URL },
     } = this.dataStore.getValue();
 
-    console.log(buildNominatimURL(address, NOMINATIM_URL));
-    const result = await requestThrottle
-      .get<NominatimReturnType>(buildNominatimURL(address, NOMINATIM_URL))
-      .catch(
-        (error) =>
-          error.message === "TRIAL MODE" &&
-          this.dataStore.update(({ ...state }) => ({
-            ...state,
-            trialModeError: true,
-          }))
-      );
+    const result = await this.requestThrottle.get<NominatimReturnType>(
+      buildNominatimURL(address, NOMINATIM_URL)
+    );
+
     const { data, status } = result;
     if (status !== 200) {
       return null;
@@ -108,34 +123,36 @@ export class DataService {
     const {
       mapServiceURLs: { OSRM: OSRM_URL },
     } = this.dataStore.getValue();
-    const OSRM_QUERY = `${OSRM_URL}${stops
-      .map(({ coordinates: { lat, lng } }) => {
-        return `${lng},${lat}`;
-      })
-      .join(";")}?geometries=geojson&steps=true&annotations=true&source=first`;
-    const result = await requestThrottle.get<OSRMReturnType>(OSRM_QUERY);
+    const OSRM_QUERY = DataService.buildOSRMQuery(OSRM_URL, stops);
+    const result = await this.requestThrottle.get<OSRMReturnType>(OSRM_QUERY);
     const { data, status } = result;
     if (status !== 200) {
       return null;
     }
-    // console.log("TEST123-data", data.waypoints, stops);
-    const wayPointsAsStops: ((typeof data)["waypoints"][number] & {
-      stopID: StopID;
-    })[] = data.waypoints.map((waypoint) => ({
-      ...waypoint,
-      stopID: stops.find(
-        ({ coordinates: { lat, lng } }) =>
-          Math.abs(lng - waypoint.location[0]) < 0.001 &&
-          Math.abs(lat - waypoint.location[1]) < 0.001
-      )!.id,
-    }));
+    const wayPointsAsStops = getWaypointsAsStops(data, stops);
+    return DataService.formatData(data, wayPointsAsStops);
+  }
+
+  private static buildOSRMQuery(OSRM_URL: string, stops: Stop[]) {
+    return `${OSRM_URL}${stops
+      .map(({ coordinates: { lat, lng } }) => {
+        return `${lng},${lat}`;
+      })
+      .join(";")}?geometries=geojson&steps=true&annotations=true&source=first`;
+  }
+
+  private static formatData(
+    data: OSRMReturnType,
+    wayPointsAsStops: ({
+      waypoint_index: number;
+      distance: Meter;
+      hint: string;
+      location: [number, number];
+      name: string;
+    } & { stopID: StopID })[]
+  ): PathwayFromLastStop | PromiseLike<PathwayFromLastStop | null> | null {
     return Object.fromEntries(
       data.trips[0].legs.map((leg, ii) => {
-        // console.log(
-        //   "TEST123-leg",
-        //   wayPointsAsStops,
-        //   wayPointsAsStops.find((waypoint) => waypoint.waypoint_index === ii)
-        // );
         return [
           wayPointsAsStops.find((waypoint) => waypoint.waypoint_index === ii)
             ?.stopID,
@@ -143,7 +160,8 @@ export class DataService {
             coordinates: leg.steps
               .map((step) => step.geometry.coordinates)
               .flat(),
-            travelDuration: (leg.duration / 60) as Minutes,
+            travelDuration: calcMinutesFromSeconds(leg.duration),
+            travelDistance: calcMilesFromKM(calcKMFromMeters(leg.distance)),
           },
         ];
       })
@@ -240,28 +258,9 @@ export class DataService {
       return;
     }
     const data = await this.getOSRM([
-      {
-        id: "HOME" as StopID,
-        coordinates: homeBase,
-        address: { q: "HOME" },
-        duration: 0 as Minutes,
-        minNumberOfWorkers: 0,
-        stopDescription: "home sweet home",
-      },
+      HOME_BASE_DUMMY_STOP(homeBase),
       ...routeStops[route].map((stop) => daysStops[stop]),
-      // {
-      //   id: "HOME" as StopID,
-      //   coordinates: homeBase,
-      //   address: {} as any,
-      //   duration: 0 as Minutes,
-      //   minNumberOfWorkers: 0,
-      //   stopDescription: "home sweet home",
-      // },
-    ]).catch(
-      (error) =>
-        error.message === "TRIAL MODE" &&
-        this.dataStore.update(({ ...s }) => ({ ...s, trialModeError: true }))
-    );
+    ]);
     if (!data) {
       throw new Error("whoops");
     }
@@ -273,6 +272,14 @@ export class DataService {
       };
     });
   }
+  private triggerTrialMode() {
+    console.log("TEST123-trigger");
+    return this.dataStore.update(({ ...s }) => ({
+      ...s,
+      trialModeError: true,
+    }));
+  }
+
   public async setHomeBase(address: FreeFormAddress): Promise<void> {
     const data = await this.getNominatim(address);
     if (!data) {
@@ -328,6 +335,22 @@ export class DataService {
 }
 
 export const dataService = new DataService(dataStore);
+function getWaypointsAsStops(
+  data: OSRMReturnType,
+  stops: Stop[]
+): ((typeof data)["waypoints"][number] & {
+  stopID: StopID;
+})[] {
+  return data.waypoints.map((waypoint) => ({
+    ...waypoint,
+    stopID: stops.find(
+      ({ coordinates: { lat, lng } }) =>
+        Math.abs(lng - waypoint.location[0]) < 0.001 &&
+        Math.abs(lat - waypoint.location[1]) < 0.001
+    )!.id,
+  }));
+}
+
 function buildNominatimURL(
   address: Address | FreeFormAddress,
   NOMINATIM_URL: string
